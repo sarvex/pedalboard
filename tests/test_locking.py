@@ -31,10 +31,7 @@ def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int
     in randomly chosen orders, ensuring that the results are the same each time.
     """
     sr = 48000
-    plugins = sum(
-        [[pedalboard.Reverb()] for _ in range(100)],
-        [],
-    )
+    plugins = sum(([pedalboard.Reverb()] for _ in range(100)), [])
 
     pedalboards = []
     for _ in range(0, num_concurrent_chains // 2):
@@ -53,9 +50,7 @@ def test_multiple_threads_using_same_plugin_instances(num_concurrent_chains: int
     futures = []
     with ThreadPoolExecutor(max_workers=num_concurrent_chains) as e:
         noise = np.random.rand(1, sr)
-        for pb in pedalboards:
-            futures.append(e.submit(pb.process, np.copy(noise)))
-
+        futures.extend(e.submit(pb.process, np.copy(noise)) for pb in pedalboards)
         # This will throw an exception if we exceed the timeout:
         processed = [future.result(timeout=2 * num_concurrent_chains) for future in futures]
 

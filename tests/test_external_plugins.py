@@ -184,7 +184,7 @@ def test_bool_parameters(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
 
     parameter_value = getattr(plugin, parameter_name)
-    assert repr(parameter_value) in ("True", "False")
+    assert repr(parameter_value) in {"True", "False"}
     assert parameter_value in (True, False)
     # Flip the parameter and ensure that it does change:
     setattr(plugin, parameter_name, not parameter_value)
@@ -274,7 +274,6 @@ def test_float_parameter_valdation(plugin_filename: str, parameter_name: str):
 def test_str_parameters(plugin_filename: str, parameter_name: str):
     plugin = load_test_plugin(plugin_filename)
     parameter_value = getattr(plugin, parameter_name)
-    assert repr(parameter_value) == repr(parameter_value)
     assert isinstance(parameter_value, str)
     # Change the parameter and ensure that it does change:
     for new_value in parameter_value.valid_values:
@@ -332,7 +331,7 @@ def test_wrapped_bool(value: bool):
     assert wrapped == value
     assert repr(wrapped) == repr(value)
     assert hash(wrapped) == hash(value)
-    assert bool(wrapped) == bool(value)
+    assert bool(wrapped) == value
     assert str(wrapped) == str(value)
     for attr in dir(value):
         assert hasattr(wrapped, attr)

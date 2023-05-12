@@ -36,15 +36,11 @@ class Pedalboard(collections.MutableSequence):
             if plugin is not None:
                 if not isinstance(plugin, Plugin):
                     raise TypeError(
-                        "An object of type {} cannot be included in a {}.".format(
-                            type(plugin), self.__class__.__name__
-                        )
+                        f"An object of type {type(plugin)} cannot be included in a {self.__class__.__name__}."
                     )
                 if plugins.count(plugin) > 1:
                     raise ValueError(
-                        "The same plugin object ({}) was included multiple times in a {}. Please"
-                        " create unique instances if the same effect is required multiple times in"
-                        " series.".format(plugin, self.__class__.__name__)
+                        f"The same plugin object ({plugin}) was included multiple times in a {self.__class__.__name__}. Please create unique instances if the same effect is required multiple times in series."
                     )
         self.plugins = plugins
 
@@ -53,9 +49,7 @@ class Pedalboard(collections.MutableSequence):
         self.sample_rate = sample_rate
 
     def __repr__(self) -> str:
-        return "<{} plugins={} sample_rate={}>".format(
-            self.__class__.__name__, repr(self.plugins), repr(self.sample_rate)
-        )
+        return f"<{self.__class__.__name__} plugins={repr(self.plugins)} sample_rate={repr(self.sample_rate)}>"
 
     def __len__(self) -> int:
         return len(self.plugins)
@@ -67,15 +61,11 @@ class Pedalboard(collections.MutableSequence):
         if value is not None:
             if not isinstance(value, Plugin):
                 raise TypeError(
-                    "An object of type {} cannot be inserted into a {}.".format(
-                        type(value), self.__class__.__name__
-                    )
+                    f"An object of type {type(value)} cannot be inserted into a {self.__class__.__name__}."
                 )
             if value in self.plugins:
                 raise ValueError(
-                    "The provided plugin object ({}) already exists in this {}. Please"
-                    " create unique instances if the same effect is required multiple times in"
-                    " series.".format(value, self.__class__.__name__)
+                    f"The provided plugin object ({value}) already exists in this {self.__class__.__name__}. Please create unique instances if the same effect is required multiple times in series."
                 )
         self.plugins.insert(index, value)
 
@@ -83,15 +73,11 @@ class Pedalboard(collections.MutableSequence):
         if value is not None:
             if not isinstance(value, Plugin):
                 raise TypeError(
-                    "An object of type {} cannot be added into a {}.".format(
-                        type(value), self.__class__.__name__
-                    )
+                    f"An object of type {type(value)} cannot be added into a {self.__class__.__name__}."
                 )
             if self.plugins.count(value) == 1 and self.plugins.index(value) != index:
                 raise ValueError(
-                    "The provided plugin object ({}) already exists in this {} at index {}. Please"
-                    " create unique instances if the same effect is required multiple times in"
-                    " series.".format(value, self.__class__.__name__, self.plugins.index(value))
+                    f"The provided plugin object ({value}) already exists in this {self.__class__.__name__} at index {self.plugins.index(value)}. Please create unique instances if the same effect is required multiple times in series."
                 )
         self.plugins.__setitem__(index, value)
 
@@ -114,10 +100,7 @@ class Pedalboard(collections.MutableSequence):
         effective_sample_rate = sample_rate or self.sample_rate
         if effective_sample_rate is None:
             raise ValueError(
-                (
-                    "No sample rate available. `sample_rate` must be provided to either the {}"
-                    " constructor or as an argument to `process`."
-                ).format(self.__class__.__name__)
+                f"No sample rate available. `sample_rate` must be provided to either the {self.__class__.__name__} constructor or as an argument to `process`."
             )
 
         # pyBind11 makes a copy of self.plugins when passing it into process.
@@ -142,6 +125,9 @@ def looks_like_float(s: str) -> bool:
 
 
 def wrap_type(base_type):
+
+
+
     class WeakTypeWrapper(base_type):
         """
         A wrapper around `base_type` that allows adding additional
@@ -155,14 +141,12 @@ def wrap_type(base_type):
                 return base_type.__new__(cls)
 
         def __init__(self, *args, **kwargs):
-            if "wrapped" in kwargs:
-                self._wrapped = weakref.ref(kwargs["wrapped"])
-                del kwargs["wrapped"]
-            else:
+            if "wrapped" not in kwargs:
                 raise ValueError(
-                    "WeakTypeWrapper({}) expected to be passed a 'wrapped' keyword argument."
-                    .format(base_type)
+                    f"WeakTypeWrapper({base_type}) expected to be passed a 'wrapped' keyword argument."
                 )
+            self._wrapped = weakref.ref(kwargs["wrapped"])
+            del kwargs["wrapped"]
             try:
                 super().__init__(*args, **kwargs)
             except TypeError:
@@ -174,13 +158,13 @@ def wrap_type(base_type):
                 return getattr(wrapped, name)
             if hasattr(super(), "__getattr__"):
                 return super().__getattr__(name)
-            raise AttributeError("'{}' has no attribute '{}'".format(base_type.__name__, name))
+            raise AttributeError(f"'{base_type.__name__}' has no attribute '{name}'")
 
         def __dir__(self) -> Iterable[str]:
-            wrapped = self._wrapped()
-            if wrapped:
+            if wrapped := self._wrapped():
                 return list(dir(wrapped)) + list(super().__dir__())
             return super().__dir__()
+
 
     return WeakTypeWrapper
 
@@ -280,9 +264,10 @@ class AudioProcessorParameter(object):
             self.max_value = max(self.ranges.values())
 
             sorted_values = sorted(self.ranges.values())
-            first_derivative_steps = set(
-                [round(abs(b - a), 8) for a, b in zip(sorted_values, sorted_values[1:])]
-            )
+            first_derivative_steps = {
+                round(abs(b - a), 8)
+                for a, b in zip(sorted_values, sorted_values[1:])
+            }
             if len(first_derivative_steps) == 1:
                 self.step_size = next(iter(first_derivative_steps))
             elif first_derivative_steps:
@@ -309,8 +294,7 @@ class AudioProcessorParameter(object):
             yield _parameter
             return
         raise RuntimeError(
-            "Parameter {} on plugin {} is no longer available. This could indicate that the plugin"
-            " has changed parameters.".format(self.__parameter_name, self.__plugin)
+            f"Parameter {self.__parameter_name} on plugin {self.__plugin} is no longer available. This could indicate that the plugin has changed parameters."
         )
 
     def __repr__(self):
@@ -319,32 +303,13 @@ class AudioProcessorParameter(object):
             cpp_repr_value = cpp_repr_value.rstrip(">")
             if self.type is float:
                 if self.step_size:
-                    return "{} value={} range=({}, {}, {})>".format(
-                        cpp_repr_value,
-                        self.string_value,
-                        self.min_value,
-                        self.max_value,
-                        self.step_size,
-                    )
+                    return f"{cpp_repr_value} value={self.string_value} range=({self.min_value}, {self.max_value}, {self.step_size})>"
                 elif self.approximate_step_size:
-                    return "{} value={} range=({}, {}, ~{})>".format(
-                        cpp_repr_value,
-                        self.string_value,
-                        self.min_value,
-                        self.max_value,
-                        self.approximate_step_size,
-                    )
+                    return f"{cpp_repr_value} value={self.string_value} range=({self.min_value}, {self.max_value}, ~{self.approximate_step_size})>"
             elif self.type is str:
-                return '{} value="{}" ({} valid string value{})>'.format(
-                    cpp_repr_value,
-                    self.string_value,
-                    len(self.valid_values),
-                    "" if len(self.valid_values) == 1 else "s",
-                )
+                return f'{cpp_repr_value} value="{self.string_value}" ({len(self.valid_values)} valid string value{"" if len(self.valid_values) == 1 else "s"})>'
             elif self.type is bool:
-                return '{} value={} boolean ("{}" and "{}")>'.format(
-                    cpp_repr_value, self.string_value, self.valid_values[0], self.valid_values[1]
-                )
+                return f'{cpp_repr_value} value={self.string_value} boolean ("{self.valid_values[0]}" and "{self.valid_values[1]}")>'
             else:
                 raise ValueError(
                     f"Parameter {self.python_name} has an unknown type. (Found '{self.type}')"
@@ -359,7 +324,7 @@ class AudioProcessorParameter(object):
                 pass
         if hasattr(super(), "__getattr__"):
             return super().__getattr__(name)
-        raise AttributeError("'{}' has no attribute '{}'".format(self.__class__.__name__, name))
+        raise AttributeError(f"'{self.__class__.__name__}' has no attribute '{name}'")
 
     def __setattr__(self, name: str, value):
         if not name.startswith("_"):
@@ -377,20 +342,11 @@ class AudioProcessorParameter(object):
                 new_value = float(new_value)
             except ValueError:
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) must be a number".format(
-                        self.python_name, new_value
-                    )
+                    f"Value received for parameter '{self.python_name}' ({new_value}) must be a number"
                 )
             if new_value < self.min_value or new_value > self.max_value:
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) is out of range [{}{}, {}{}]".format(
-                        self.python_name,
-                        new_value,
-                        self.min_value,
-                        self.label,
-                        self.max_value,
-                        self.label,
-                    )
+                    f"Value received for parameter '{self.python_name}' ({new_value}) is out of range [{self.min_value}{self.label}, {self.max_value}{self.label}]"
                 )
             plugin_reported_raw_value = self.get_raw_value_for_text(str(new_value))
 
@@ -419,16 +375,11 @@ class AudioProcessorParameter(object):
                 new_value = str(new_value)
             else:
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) should be a string (or string-like),"
-                    " but got an object of type: {}".format(
-                        self.python_name, new_value, type(new_value)
-                    )
+                    f"Value received for parameter '{self.python_name}' ({new_value}) should be a string (or string-like), but got an object of type: {type(new_value)}"
                 )
             if new_value not in self.valid_values:
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) not in list of valid values: {}".format(
-                        self.python_name, new_value, self.valid_values
-                    )
+                    f"Value received for parameter '{self.python_name}' ({new_value}) not in list of valid values: {self.valid_values}"
                 )
             plugin_reported_raw_value = self.get_raw_value_for_text(new_value)
             expected_low, expected_high = self._value_to_raw_value_ranges[new_value]
@@ -445,15 +396,12 @@ class AudioProcessorParameter(object):
         elif self.type is bool:
             if not isinstance(new_value, (bool, WrappedBool)):
                 raise ValueError(
-                    "Value received for parameter '{}' ({}) should be a boolean,"
-                    " but got an object of type: {}".format(
-                        self.python_name, new_value, type(new_value)
-                    )
+                    f"Value received for parameter '{self.python_name}' ({new_value}) should be a boolean, but got an object of type: {type(new_value)}"
                 )
             return 1.0 if new_value else 0.0
         else:
             raise ValueError(
-                "Parameter has invalid type: {}. This should not be possible!".format(self.type)
+                f"Parameter has invalid type: {self.type}. This should not be possible!"
             )
 
 
@@ -463,14 +411,12 @@ def to_python_parameter_name(parameter: _AudioProcessorParameter) -> Optional[st
 
     name = parameter.name.lower().strip()
     if parameter.label and not parameter.label.startswith(":"):
-        name = "{} {}".format(name, parameter.label.lower())
+        name = f"{name} {parameter.label.lower()}"
     # Replace all non-alphanumeric characters with underscores
     name = [c if c.isalpha() or c.isnumeric() else "_" for c in name]
     # Remove any double-underscores:
     name = [a for a, b in zip(name, name[1:]) if a != b or b != "_"] + [name[-1]]
-    # Remove any leading or trailing underscores:
-    name = "".join(name).strip("_")
-    return name
+    return "".join(name).strip("_")
 
 
 class ExternalPlugin(object):
@@ -481,9 +427,7 @@ class ExternalPlugin(object):
         for key, value in parameter_values.items():
             if key not in parameters:
                 raise AttributeError(
-                    'Parameter named "{}" not found. Valid options: {}'.format(
-                        key, ", ".join(self._parameter_weakrefs.keys())
-                    )
+                    f'Parameter named "{key}" not found. Valid options: {", ".join(self._parameter_weakrefs.keys())}'
                 )
             setattr(self, key, value)
 
@@ -532,15 +476,13 @@ class ExternalPlugin(object):
     def __dir__(self):
         parameter_names = []
         for parameter in self._parameters:
-            name = to_python_parameter_name(parameter)
-            if name:
+            if name := to_python_parameter_name(parameter):
                 parameter_names.append(name)
         return super().__dir__() + parameter_names
 
     def __getattr__(self, name: str):
         if not name.startswith("_"):
-            parameter = self._get_parameter_by_python_name(name)
-            if parameter:
+            if parameter := self._get_parameter_by_python_name(name):
                 string_value = parameter.string_value
                 if parameter.type is float:
                     return FloatWithParameter(
@@ -559,8 +501,7 @@ class ExternalPlugin(object):
 
     def __setattr__(self, name: str, value):
         if not name.startswith("__"):
-            parameter = self._get_parameter_by_python_name(name)
-            if parameter:
+            if parameter := self._get_parameter_by_python_name(name):
                 parameter.raw_value = parameter.get_raw_value_for(value)
                 return
         super().__setattr__(name, value)
@@ -608,9 +549,7 @@ AVAILABLE_PLUGIN_CLASSES = list(ExternalPlugin.__subclasses__())
 def load_plugin(*args, **kwargs):
     if not AVAILABLE_PLUGIN_CLASSES:
         raise ImportError(
-            "Pedalboard found no supported external plugin types in this installation ({}).".format(
-                platform.system()
-            )
+            f"Pedalboard found no supported external plugin types in this installation ({platform.system()})."
         )
     exceptions = []
     for plugin_class in AVAILABLE_PLUGIN_CLASSES:
@@ -632,8 +571,10 @@ def load_plugin(*args, **kwargs):
                 tried_plugins,
                 "\n\t".join(
                     [
-                        "{}: {}".format(klass.__name__, exception)
-                        for klass, exception in zip(AVAILABLE_PLUGIN_CLASSES, exceptions)
+                        f"{klass.__name__}: {exception}"
+                        for klass, exception in zip(
+                            AVAILABLE_PLUGIN_CLASSES, exceptions
+                        )
                     ]
                 ),
             )

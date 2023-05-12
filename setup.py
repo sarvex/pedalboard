@@ -55,7 +55,7 @@ elif platform.system() == "Windows":
     JUCE_CPPFLAGS.append("-DWINDOWS=1")
 else:
     raise NotImplementedError(
-        "Not sure how to build JUCE on platform: {}!".format(platform.system())
+        f"Not sure how to build JUCE on platform: {platform.system()}!"
     )
 
 
@@ -131,17 +131,17 @@ if platform.system() == "Darwin":
     # Replace .cpp sources with matching .mm sources on macOS to force the
     # compiler to use Apple's Objective-C and Objective-C++ code.
     for objc_source in Path("pedalboard").glob("**/*.mm"):
-        matching_cpp_source = next(
+        if matching_cpp_source := next(
             iter(
                 [
                     cpp_source
                     for cpp_source in sources
-                    if os.path.splitext(objc_source.name)[0] == os.path.splitext(cpp_source.name)[0]
+                    if os.path.splitext(objc_source.name)[0]
+                    == os.path.splitext(cpp_source.name)[0]
                 ]
             ),
             None,
-        )
-        if matching_cpp_source:
+        ):
             sources[sources.index(matching_cpp_source)] = objc_source
     PEDALBOARD_SOURCES = [str(p.resolve()) for p in sources]
 elif platform.system() == "Linux":
@@ -179,7 +179,7 @@ elif platform.system() == "Windows":
     PEDALBOARD_SOURCES = [str(p.resolve()) for p in (list(Path("pedalboard").glob("**/*.cpp")))]
 else:
     raise NotImplementedError(
-        "Not sure how to build JUCE on platform: {}!".format(platform.system())
+        f"Not sure how to build JUCE on platform: {platform.system()}!"
     )
 
 pedalboard_cpp = Pybind11Extension(
